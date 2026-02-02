@@ -4,8 +4,8 @@
 A comprehensive WordPress restaurant management plugin created at `wp-content/plugins/risto-base.php`
 
 **Version:** 1.0.0  
-**File Size:** 48KB  
-**Lines of Code:** 961
+**File Size:** 52KB  
+**Lines of Code:** 1072
 
 ## Features Implemented
 

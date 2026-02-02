@@ -242,7 +242,13 @@ class RistoBase {
                 .risto-grid { grid-template-columns: 1fr; }
                 .risto-tabs { flex-wrap: nowrap; }
             }
-            .risto-gold-accent { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+            .risto-gold-accent { 
+                background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
+                -webkit-background-clip: text; 
+                -webkit-text-fill-color: transparent; 
+                background-clip: text;
+                color: #ffd700;
+            }
             .risto-success-message { background: #28a745; color: #fff; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center; font-weight: bold; }
             .risto-error-message { background: #dc3545; color: #fff; padding: 15px; border-radius: 10px; margin: 20px 0; text-align: center; font-weight: bold; }
         </style>
@@ -530,10 +536,17 @@ class RistoBase {
         
         global $wpdb;
         $table = $wpdb->prefix . 'risto_forms';
+        
+        $fields_json = stripslashes($_POST['fields']);
+        $fields_decoded = json_decode($fields_json);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            wp_send_json_error('Formato fields non valido');
+        }
+        
         $data = array(
             'name' => sanitize_text_field($_POST['name']),
             'slug' => sanitize_title($_POST['slug']),
-            'fields' => wp_kses_post($_POST['fields'])
+            'fields' => sanitize_text_field($fields_json)
         );
         
         if (isset($_POST['form_id']) && $_POST['form_id']) {
@@ -611,10 +624,17 @@ class RistoBase {
         
         global $wpdb;
         $table = $wpdb->prefix . 'risto_orders';
+        
+        $items_json = stripslashes($_POST['items']);
+        $items_decoded = json_decode($items_json);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            wp_send_json_error('Formato items non valido');
+        }
+        
         $data = array(
             'table_number' => sanitize_text_field($_POST['table_number']),
             'waiter_id' => isset($_POST['waiter_id']) ? intval($_POST['waiter_id']) : null,
-            'items' => wp_kses_post($_POST['items']),
+            'items' => sanitize_text_field($items_json),
             'total' => floatval($_POST['total']),
             'status' => 'pending',
             'notes' => sanitize_textarea_field($_POST['notes'])
@@ -629,8 +649,26 @@ class RistoBase {
         
         if (!isset($_FILES['csv_file'])) wp_send_json_error('Nessun file caricato');
         
-        $file = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($file, 'r');
+        $file = $_FILES['csv_file'];
+        
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error('Errore durante il caricamento del file');
+        }
+        
+        if ($file['size'] > 5242880) {
+            wp_send_json_error('File troppo grande (max 5MB)');
+        }
+        
+        $allowed_types = array('text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel');
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        
+        if (!in_array($mime_type, $allowed_types) && pathinfo($file['name'], PATHINFO_EXTENSION) !== 'csv') {
+            wp_send_json_error('Tipo di file non valido. Solo file CSV sono permessi.');
+        }
+        
+        $handle = fopen($file['tmp_name'], 'r');
         if (!$handle) wp_send_json_error('Impossibile aprire il file');
         
         global $wpdb;
@@ -973,16 +1011,19 @@ class RistoBase {
         function submitOrder() {
             var tableNumber = document.getElementById('table-number').value;
             var notes = document.getElementById('order-notes').value;
+            var messageDiv = document.getElementById('order-message');
             
             if (!tableNumber) {
-                alert('Inserisci il numero del tavolo');
+                messageDiv.innerHTML = '<div class="risto-error-message">Inserisci il numero del tavolo</div>';
                 return;
             }
             
             if (orderTotal === 0) {
-                alert('Aggiungi almeno un piatto al tuo ordine');
+                messageDiv.innerHTML = '<div class="risto-error-message">Aggiungi almeno un piatto al tuo ordine</div>';
                 return;
             }
+            
+            messageDiv.innerHTML = '';
             
             var orderData = {
                 action: 'risto_save_order',
@@ -999,7 +1040,7 @@ class RistoBase {
             
             xhr.onload = function() {
                 if (xhr.status === 200) {
-                    document.getElementById('order-message').innerHTML = '<div class="risto-success-message">Ordine inviato con successo!</div>';
+                    messageDiv.innerHTML = '<div class="risto-success-message">Ordine inviato con successo!</div>';
                     
                     orderItems = {};
                     orderTotal = 0;
@@ -1012,7 +1053,7 @@ class RistoBase {
                         qty.textContent = '0';
                     });
                 } else {
-                    document.getElementById('order-message').innerHTML = '<div class="risto-error-message">Errore durante l\'invio dell\'ordine</div>';
+                    messageDiv.innerHTML = '<div class="risto-error-message">Errore durante l\'invio dell\'ordine</div>';
                 }
             };
             
