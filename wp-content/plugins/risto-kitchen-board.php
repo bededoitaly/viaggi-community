@@ -839,7 +839,7 @@ class Risto_Kitchen_Board {
                     console.log('Voice command:', transcript);
                     
                     // Match: \"ordine numero X pronto\"
-                    const match = transcript.match(/ordine\\\\s+numero\\\\s+(\\\\d+)\\\\s+pronto/i);
+                    const match = transcript.match(/ordine\s+numero\s+(\d+)\s+pronto/i);
                     if (match) {
                         const orderNumber = parseInt(match[1]);
                         markOrderReady(orderNumber);

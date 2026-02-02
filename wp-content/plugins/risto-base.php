@@ -15,13 +15,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class RistoBase {
+class Risto_Base {
     
     private static $instance = null;
     
     public static function getInstance() {
         if (self::$instance == null) {
-            self::$instance = new RistoBase();
+            self::$instance = new Risto_Base();
         }
         return self::$instance;
     }
@@ -1069,4 +1069,4 @@ class RistoBase {
     }
 }
 
-RistoBase::getInstance();
+Risto_Base::getInstance();
