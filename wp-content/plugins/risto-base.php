@@ -36,6 +36,7 @@ class RistoBase {
         add_action('wp_ajax_risto_save_record', array($this, 'ajaxSaveRecord'));
         add_action('wp_ajax_risto_delete_record', array($this, 'ajaxDeleteRecord'));
         add_action('wp_ajax_risto_get_records', array($this, 'ajaxGetRecords'));
+        add_action('wp_ajax_risto_get_order_details', array($this, 'ajaxGetOrderDetails'));
         add_action('wp_ajax_risto_save_order', array($this, 'ajaxSaveOrder'));
         add_action('wp_ajax_nopriv_risto_save_order', array($this, 'ajaxSaveOrder'));
         add_action('wp_ajax_risto_import_csv', array($this, 'ajaxImportCsv'));
@@ -320,13 +321,41 @@ class RistoBase {
                             <td>€<?php echo esc_html(number_format($order->total, 2)); ?></td>
                             <td><?php echo esc_html($order->status); ?></td>
                             <td><?php echo esc_html($order->created_at); ?></td>
-                            <td><button onclick="alert('Dettagli ordine #<?php echo $order->id; ?>')" class="risto-btn">Dettagli</button></td>
+                            <td>
+                                <button onclick="viewOrderDetails(<?php echo $order->id; ?>)" class="risto-btn">Dettagli</button>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
         </div>
+        <script>
+        function viewOrderDetails(orderId) {
+            jQuery.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'risto_get_order_details',
+                    order_id: orderId,
+                    nonce: '<?php echo wp_create_nonce('risto_nonce'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        var order = response.data;
+                        var items = JSON.parse(order.items);
+                        var itemsText = '';
+                        for (var itemId in items) {
+                            itemsText += 'ID ' + itemId + ': Qty ' + items[itemId].quantity + ' x €' + items[itemId].price.toFixed(2) + '\n';
+                        }
+                        alert('Ordine #' + orderId + '\n\nTavolo: ' + order.table_number + '\nTotale: €' + order.total + '\n\nPiatti:\n' + itemsText + '\nNote: ' + (order.notes || 'Nessuna'));
+                    } else {
+                        alert('Errore nel recupero dei dettagli');
+                    }
+                }
+            });
+        }
+        </script>
         <?php
     }
     
@@ -561,7 +590,25 @@ class RistoBase {
         wp_send_json_success($records);
     }
     
+    public function ajaxGetOrderDetails() {
+        check_ajax_referer('risto_nonce', 'nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error('Permessi insufficienti');
+        
+        global $wpdb;
+        $table = $wpdb->prefix . 'risto_orders';
+        $order_id = intval($_POST['order_id']);
+        $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $order_id));
+        
+        if ($order) {
+            wp_send_json_success($order);
+        } else {
+            wp_send_json_error('Ordine non trovato');
+        }
+    }
+    
     public function ajaxSaveOrder() {
+        check_ajax_referer('risto_order_nonce', 'nonce');
+        
         global $wpdb;
         $table = $wpdb->prefix . 'risto_orders';
         $data = array(
@@ -586,11 +633,33 @@ class RistoBase {
         $handle = fopen($file, 'r');
         if (!$handle) wp_send_json_error('Impossibile aprire il file');
         
+        global $wpdb;
+        $table = $wpdb->prefix . 'risto_records';
+        $form_id = isset($_POST['form_id']) ? intval($_POST['form_id']) : 0;
+        
+        if (!$form_id) {
+            fclose($handle);
+            wp_send_json_error('Form ID mancante');
+        }
+        
         $imported = 0;
         $headers = fgetcsv($handle);
-        while (($data = fgetcsv($handle)) !== false) {
+        
+        while (($row = fgetcsv($handle)) !== false) {
+            $record_data = array();
+            foreach ($headers as $index => $header) {
+                if (isset($row[$index])) {
+                    $record_data[sanitize_key($header)] = sanitize_text_field($row[$index]);
+                }
+            }
+            
+            $wpdb->insert($table, array(
+                'form_id' => $form_id,
+                'data' => json_encode($record_data)
+            ));
             $imported++;
         }
+        
         fclose($handle);
         wp_send_json_success("Importati $imported record");
     }
@@ -679,9 +748,9 @@ class RistoBase {
             <div class="risto-header"><h1 class="risto-gold-accent">Menu</h1></div>
             
             <div class="risto-category-filters">
-                <button class="risto-category-filter active" onclick="filterCategory('all')">Tutti</button>
+                <button class="risto-category-filter active" onclick="filterCategory('all', event)">Tutti</button>
                 <?php foreach ($categories as $cat): ?>
-                    <button class="risto-category-filter" onclick="filterCategory('<?php echo esc_js($cat); ?>')">
+                    <button class="risto-category-filter" onclick="filterCategory('<?php echo esc_js($cat); ?>', event)">
                         <?php echo esc_html($cat); ?>
                     </button>
                 <?php endforeach; ?>
@@ -728,7 +797,7 @@ class RistoBase {
         <script>
         var quantities = {};
         
-        function filterCategory(category) {
+        function filterCategory(category, event) {
             var items = document.querySelectorAll('.risto-menu-item');
             var filters = document.querySelectorAll('.risto-category-filter');
             
@@ -801,7 +870,7 @@ class RistoBase {
             
             <div class="risto-tabs">
                 <?php $first = true; foreach ($categories as $cat): ?>
-                    <button class="risto-tab <?php echo $first ? 'active' : ''; ?>" onclick="switchTab('<?php echo esc_js($cat); ?>')">
+                    <button class="risto-tab <?php echo $first ? 'active' : ''; ?>" onclick="switchTab('<?php echo esc_js($cat); ?>', event)">
                         <?php echo esc_html($cat); ?>
                     </button>
                     <?php $first = false; ?>
@@ -862,7 +931,7 @@ class RistoBase {
         var orderItems = {};
         var orderTotal = 0;
         
-        function switchTab(category) {
+        function switchTab(category, event) {
             var tabs = document.querySelectorAll('.risto-tab');
             var contents = document.querySelectorAll('.tab-content');
             
@@ -917,6 +986,7 @@ class RistoBase {
             
             var orderData = {
                 action: 'risto_save_order',
+                nonce: '<?php echo wp_create_nonce('risto_order_nonce'); ?>',
                 table_number: tableNumber,
                 items: JSON.stringify(orderItems),
                 total: orderTotal,
