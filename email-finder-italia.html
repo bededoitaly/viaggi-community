@@ -217,6 +217,18 @@
     display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .72rem;
     font-weight: 700; background: var(--accent); color: #fff; margin-left: 6px;
   }
+  .warning-banner {
+    background: #fff4d6;
+    border: 1px solid #ffd66b;
+    color: #7b5a00;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    font-size: .88rem;
+    line-height: 1.45;
+  }
+  .warning-banner strong { color: #5c4200; }
   .action-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .toggle-wrap { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
   .toggle-wrap input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); }
@@ -238,6 +250,7 @@
 </header>
 
 <div class="container">
+  <div id="file-mode-banner" class="warning-banner" style="display:none"></div>
   <div class="grid">
 
     <!-- ─── LEFT PANEL ─── -->
@@ -245,7 +258,7 @@
       <!-- Geolocation -->
       <div class="card" style="margin-bottom:20px">
         <h2>📍 Posizione Geografica</h2>
-        <button class="btn btn-geo" id="btn-geo" onclick="detectLocation()">
+        <button type="button" class="btn btn-geo" id="btn-geo" onclick="detectLocation()">
           📡 Rileva Posizione Automaticamente
         </button>
         <div id="geo-status"></div>
@@ -253,7 +266,7 @@
           <label>Oppure inserisci la tua città</label>
           <input type="text" id="manual-city" placeholder="Es: Milano, Roma, Napoli…" onkeydown="if(event.key==='Enter')geocodeCity()">
         </div>
-        <button class="btn btn-outline btn-sm" onclick="geocodeCity()" style="width:100%">
+        <button type="button" class="btn btn-outline btn-sm" onclick="geocodeCity()" style="width:100%">
           🌍 Cerca Posizione
         </button>
         <div id="comuni-count"></div>
@@ -336,7 +349,7 @@
           </div>
         </div>
 
-        <button class="btn btn-primary" id="btn-start" onclick="startSearch()" disabled>
+        <button type="button" class="btn btn-primary" id="btn-start" onclick="startSearch()" disabled>
           🚀 Avvia Ricerca Geolocalizzata
         </button>
 
@@ -359,17 +372,17 @@
 
       <!-- Tabs -->
       <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-queries',this)">📋 Query Generate</button>
-        <button class="tab-btn" onclick="switchTab('tab-paste',this)">📥 Incolla Risultati</button>
-        <button class="tab-btn" onclick="switchTab('tab-emails',this)">✉️ Email Trovate</button>
+        <button type="button" class="tab-btn active" onclick="switchTab('tab-queries',this)">📋 Query Generate</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tab-paste',this)">📥 Incolla Risultati</button>
+        <button type="button" class="tab-btn" onclick="switchTab('tab-emails',this)">✉️ Email Trovate</button>
       </div>
 
       <!-- Tab: Queries -->
       <div id="tab-queries" class="tab-panel active">
         <div class="action-bar">
-          <button class="btn btn-sm btn-outline" onclick="copyAllQueries()">📋 Copia tutte le query</button>
-          <button class="btn btn-sm btn-outline" onclick="openAllSearches()">🌐 Apri prime 10 ricerche</button>
-          <button class="btn btn-sm btn-outline" onclick="exportQueries()">💾 Esporta .txt</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="copyAllQueries()">📋 Copia tutte le query</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="openAllSearches()">🌐 Apri prime 10 ricerche</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="exportQueries()">💾 Esporta .txt</button>
         </div>
         <div id="queries-container">
           <div class="empty-state">
@@ -391,8 +404,8 @@
             placeholder="Incolla qui il testo dei risultati di ricerca…&#10;&#10;Il sistema analizzerà automaticamente il testo ed estrarrà tutti gli indirizzi email validi, deduplicandoli e assegnando un punteggio di qualità."
             oninput="processPastedText(this.value)"></textarea>
           <div style="display:flex;gap:8px;margin-top:10px">
-            <button class="btn btn-sm btn-primary" onclick="pasteFromClipboard()">📋 Incolla dagli Appunti</button>
-            <button class="btn btn-sm btn-outline" onclick="document.getElementById('paste-zone').value='';processPastedText('')">🗑️ Pulisci</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="pasteFromClipboard()">📋 Incolla dagli Appunti</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('paste-zone').value='';processPastedText('')">🗑️ Pulisci</button>
           </div>
           <div id="paste-stats" style="font-size:.8rem;color:var(--muted);margin-top:8px"></div>
         </div>
@@ -410,9 +423,9 @@
           </select>
         </div>
         <div class="action-bar">
-          <button class="btn btn-sm btn-green" onclick="exportCSV()">⬇️ Esporta CSV</button>
-          <button class="btn btn-sm btn-outline" onclick="copyAllEmails()">📋 Copia tutte</button>
-          <button class="btn btn-sm btn-red" onclick="clearEmails()">🗑️ Cancella</button>
+          <button type="button" class="btn btn-sm btn-green" onclick="exportCSV()">⬇️ Esporta CSV</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="copyAllEmails()">📋 Copia tutte</button>
+          <button type="button" class="btn btn-sm btn-red" onclick="clearEmails()">🗑️ Cancella</button>
         </div>
         <div id="email-results">
           <div class="empty-state">
@@ -441,6 +454,7 @@ const STATE = {
   isRunning: false,
   loaded: false,
 };
+const IS_FILE_CONTEXT = window.location.protocol === 'file:';
 
 // ════════════════════════════════════════════════════════════════════
 //  COMUNI DATA SOURCE
@@ -679,12 +693,12 @@ function renderQueries() {
     const links = engKeys.map(eng => {
       const firstUrl = q.urls[eng]?.[0]?.url;
       if (!firstUrl) return '';
-      return `<a class="query-link ${engClass[eng]}" href="${firstUrl}" target="_blank"
-          onclick="markDone(${idx})">${engLabels[eng]}</a>`;
+      return `<button type="button" class="query-link ${engClass[eng]}"
+          onclick="openQuery(${idx}, '${eng}')">${engLabels[eng]}</button>`;
     }).join('');
 
     // Also add "all dorks" link
-    const allBtn = `<button class="query-link" style="background:#edf2fb;color:#3a5a8c;border:1px solid #b8cff7"
+    const allBtn = `<button type="button" class="query-link" style="background:#edf2fb;color:#3a5a8c;border:1px solid #b8cff7"
       onclick="openAllDorks(${idx})">▶ Tutti</button>`;
 
     row.innerHTML = `
@@ -703,6 +717,25 @@ function markDone(idx) {
   if (row) row.classList.add('done');
 }
 
+function openExternalUrl(url) {
+  const popup = window.open('', '_blank', 'noopener,noreferrer');
+  if (popup) {
+    popup.opener = null;
+    popup.location.href = url;
+    return true;
+  }
+  window.location.assign(url);
+  return false;
+}
+
+function openQuery(idx, eng) {
+  const q = STATE.queries[idx];
+  const url = q?.urls?.[eng]?.[0]?.url;
+  if (!url) return;
+  openExternalUrl(url);
+  markDone(idx);
+}
+
 function openAllDorks(idx) {
   const q = STATE.queries[idx];
   if (!q) return;
@@ -710,7 +743,7 @@ function openAllDorks(idx) {
   const engKeys = engine === 'all' ? ['google','bing','duckduckgo'] : [engine];
   engKeys.forEach(eng => {
     (q.urls[eng] || []).forEach((item, i) => {
-      setTimeout(() => window.open(item.url, '_blank'), i * 600);
+      setTimeout(() => openExternalUrl(item.url), i * 600);
     });
   });
   markDone(idx);
@@ -722,7 +755,7 @@ function openAllSearches() {
     const engine = document.getElementById('search-engine').value;
     const eng = engine === 'all' ? 'google' : engine;
     const url = q.urls[eng]?.[0]?.url;
-    if (url) setTimeout(() => window.open(url, '_blank'), idx * 700);
+    if (url) setTimeout(() => openExternalUrl(url), idx * 700);
     markDone(idx);
   });
 }
@@ -975,8 +1008,18 @@ function downloadFile(name, content) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
   a.download = name;
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
   a.click();
+  a.remove();
   URL.revokeObjectURL(a.href);
+}
+
+function showFileModeNotice() {
+  const banner = document.getElementById('file-mode-banner');
+  if (!banner || !IS_FILE_CONTEXT) return;
+  banner.innerHTML = '<strong>Modalità file locale rilevata.</strong> Alcuni browser limitano GPS, clipboard e richieste di rete quando la pagina è aperta con <code>file://</code>. Usa la città manuale e, se vuoi evitare errori come <code>Unsafe attempt to load URL file:///...</code>, apri il file tramite un piccolo server locale (es. <code>python -m http.server</code>) invece del doppio click.';
+  banner.style.display = 'block';
 }
 
 // Keyword tags
@@ -1079,6 +1122,7 @@ const FALLBACK_COMUNI = [
 // ════════════════════════════════════════════════════════════════════
 function init() {
   initKeywordTags();
+  showFileModeNotice();
 
   // Try to restore cached location
   try {
